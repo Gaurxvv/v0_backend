@@ -90,7 +90,7 @@ To prevent hardcoded one-off `if/else` checks scattered across routes, controlle
    - Displays `Walkover` badge in Status column.
    - Highlights winning team in green with `(Winner)`.
    - Added direct "Award Walkover" action button and modal.
-3. **Public Fixtures & Match Table (`Fixtures.js`, `MatchTable.js`, `KnockoutBracket.js`, `PoolFixtures.js`)**:
+3. **Public Fixtures & Match Table (`TournamentFixtures.js`, `Fixtures.js`, `RefereeFixtures.js`, `MatchTable.js`, `KnockoutBracket.js`, `PoolFixtures.js`)**:
    - Match cards show clear **Walkover** tag.
    - Winner is highlighted with a green accent and `(Winner)` badge.
    - Conceded team is styled with muted strike-through text.
