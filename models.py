@@ -7,6 +7,12 @@ class MatchType(str, Enum):
     SINGLES = 'singles'
     DOUBLES = 'doubles'
 
+class MatchOutcome(str, Enum):
+    REGULAR  = 'regular'
+    WALKOVER = 'walkover'
+    FORFEIT  = 'forfeit'
+    BYE      = 'bye'
+
 class SkillType(str, Enum):
     BEGINNER = 'beginner'
     INTERMEDIATE = 'intermediate'
@@ -96,6 +102,9 @@ class Match(db.Model):
     successor = db.Column(db.Integer, db.ForeignKey('match.id'), nullable=True)
     bracket_position = db.Column(db.Integer, nullable=True)
     round_number = db.Column(db.Integer, nullable=True)
+    # Outcome type — extensible: regular | walkover | forfeit | bye
+    outcome_type    = db.Column(db.String(20), default=MatchOutcome.REGULAR.value, nullable=False)
+    outcome_details = db.Column(db.Text, nullable=True)
 
 class Score(db.Model):
     id = db.Column(db.Integer, primary_key=True)

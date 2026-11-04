@@ -2,6 +2,7 @@ from flask import request, jsonify
 from models import Match, Team, Player, Tournament, Score, db, SuperTournament
 from sqlalchemy import or_
 from . import match_bp
+from services.outcome_service import OutcomeService
 
 @match_bp.route('/create-match', methods=['POST'])
 def create_match():
@@ -390,6 +391,40 @@ def player_checkin():
             'updated_teams': updated_teams
         }), 200
 
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+# ---------------------------------------------------------------------------
+# POST /match/outcome
+# Directly assign an outcome to a match (walkover, forfeit, bye, etc.)
+# ---------------------------------------------------------------------------
+
+@match_bp.route('/match/outcome', methods=['POST'])
+def set_match_outcome():
+    data = request.get_json() or {}
+    match_id      = data.get('match_id')
+    outcome_type  = data.get('outcome_type', 'walkover')
+    winner_team_id = data.get('winner_team_id')
+    details       = data.get('details')
+    override      = data.get('override', False)
+
+    if not match_id:
+        return jsonify({'error': 'match_id is required'}), 400
+
+    try:
+        result = OutcomeService.apply_outcome(
+            match_id=match_id,
+            outcome_type=outcome_type,
+            winner_team_id=winner_team_id,
+            details=details,
+            final=True,
+            override=override,
+        )
+        return jsonify(result), 200
+    except LookupError as e:
+        return jsonify({'error': str(e)}), 404
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

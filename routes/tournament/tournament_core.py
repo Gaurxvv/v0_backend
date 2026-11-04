@@ -1,3 +1,4 @@
+from services.outcome_service import OutcomeService
 from flask import request, jsonify, current_app, render_template
 from models import Tournament, Team, Player, Match, Score, Round, db, Season
 from sqlalchemy import text, or_, and_, func, case, distinct
@@ -131,6 +132,10 @@ def show_standings(tournament_id):
             m.team2_id,
             m.round_id,
             m.pool,
+            m.status,
+            m.is_final,
+            m.winner_team_id,
+            m.outcome_type,
             s1.team_id as team1_id,
             s1.score as team1_score,
             s2.team_id as team2_id,
@@ -171,24 +176,24 @@ def show_standings(tournament_id):
         print(f"Team1 ({match.team1_id}): {match.team1_score}")
         print(f"Team2 ({match.team2_id}): {match.team2_score}")
         
-        # Add scores
-        team_scores[round_id][match.team1_id]['points_scored'] += match.team1_score
-        team_scores[round_id][match.team1_id]['points_lost'] += match.team2_score
-        team_scores[round_id][match.team2_id]['points_scored'] += match.team2_score
-        team_scores[round_id][match.team2_id]['points_lost'] += match.team1_score
-        
-        # Track match and determine winner
-        if match.team1_score == 0 and match.team2_score == 0:
+        # Calculate standings impact using OutcomeService
+        impact = OutcomeService.get_standings_impact(match, match.team1_score, match.team2_score)
+        if not impact['is_played']:
             print("Match not played yet")
             continue
             
+        team_scores[round_id][match.team1_id]['points_scored'] += impact['team1']['points_scored']
+        team_scores[round_id][match.team1_id]['points_lost'] += impact['team1']['points_lost']
+        team_scores[round_id][match.team2_id]['points_scored'] += impact['team2']['points_scored']
+        team_scores[round_id][match.team2_id]['points_lost'] += impact['team2']['points_lost']
+        
         team_scores[round_id][match.team1_id]['matches'].add(match.match_id)
         team_scores[round_id][match.team2_id]['matches'].add(match.match_id)
         
-        if match.team1_score > match.team2_score:
+        if impact['winner'] == match.team1_id:
             team_scores[round_id][match.team1_id]['matches_won'] += 1
             print(f"Winner: Team {match.team1_id}")
-        elif match.team2_score > match.team1_score:
+        elif impact['winner'] == match.team2_id:
             team_scores[round_id][match.team2_id]['matches_won'] += 1
             print(f"Winner: Team {match.team2_id}")
         else:
@@ -305,6 +310,10 @@ def show_overall_standings(tournament_id):
             m.id as match_id,
             m.team1_id,
             m.team2_id,
+            m.status,
+            m.is_final,
+            m.winner_team_id,
+            m.outcome_type,
             s1.team_id as team1_id,
             s1.score as team1_score,
             s2.team_id as team2_id,
@@ -341,25 +350,26 @@ def show_overall_standings(tournament_id):
         print(f"Team1 ({match.team1_id}): {match.team1_score}")
         print(f"Team2 ({match.team2_id}): {match.team2_score}")
         
-        # Skip unplayed matches
-        if match.team1_score == 0 and match.team2_score == 0:
+        # Calculate standings impact using OutcomeService
+        impact = OutcomeService.get_standings_impact(match, match.team1_score, match.team2_score)
+        if not impact['is_played']:
             print("Match not played yet")
             continue
         
         # Add scores
-        team_scores[match.team1_id]['points_scored'] += match.team1_score
-        team_scores[match.team1_id]['points_lost'] += match.team2_score
-        team_scores[match.team2_id]['points_scored'] += match.team2_score
-        team_scores[match.team2_id]['points_lost'] += match.team1_score
+        team_scores[match.team1_id]['points_scored'] += impact['team1']['points_scored']
+        team_scores[match.team1_id]['points_lost'] += impact['team1']['points_lost']
+        team_scores[match.team2_id]['points_scored'] += impact['team2']['points_scored']
+        team_scores[match.team2_id]['points_lost'] += impact['team2']['points_lost']
         
         # Track match and determine winner
         team_scores[match.team1_id]['matches'].add(match.match_id)
         team_scores[match.team2_id]['matches'].add(match.match_id)
         
-        if match.team1_score > match.team2_score:
+        if impact['winner'] == match.team1_id:
             team_scores[match.team1_id]['matches_won'] += 1
             print(f"Winner: Team {match.team1_id}")
-        elif match.team2_score > match.team1_score:
+        elif impact['winner'] == match.team2_id:
             team_scores[match.team2_id]['matches_won'] += 1
             print(f"Winner: Team {match.team2_id}")
         else:
